@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EMI Calculator – Smart, Simple & Insightful | Credit Clarity</title>
+  <meta name="description" content="Free dark-themed EMI calculator. Compute EMI, APR (fees-included), simulate monthly prepayments from any month, and see tenure & interest savings.">
+  <meta name="keywords" content="EMI calculator, amortization schedule, prepayment calculator, APR including fees, loan interest calculator">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root{--bg:#0b1021;--card:#0f172a;--ink:#e5e7eb;--muted:#94a3b8;--accent:#38bdf8;--primary:#22c55e;--line:#1f2937;--shadow:0 8px 24px rgba(0,0,0,.35)}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:radial-gradient(80rem 60rem at -10% -20%,rgba(56,189,248,.08),transparent 60%),linear-gradient(180deg,#0b1021,#0a0f1f);color:var(--ink)}
+    header{padding:28px 16px 6px;max-width:1100px;margin:0 auto}
+    header h1{margin:0 0 8px;font-size:clamp(26px,3.5vw,40px)}
+    header p{margin:0;color:var(--muted)}
+    .container{max-width:1100px;margin:16px auto 40px;padding:0 16px;display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
+    @media(max-width:900px){.container{grid-template-columns:1fr}}
+    .card{background:linear-gradient(180deg,#0f172a,#0b1021);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
+    label{display:block;font-size:13px;color:#cbd5e1;margin-bottom:4px}
+    input,select{width:100%;padding:10px;border-radius:10px;border:1px solid #263244;background:#0b1222;color:var(--ink)}
+    input:focus,select:focus{outline:none;border-color:#0891b2;box-shadow:0 0 0 .2rem rgba(56,189,248,.2)}
+    .hint{font-size:12px;color:#9ca3af}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    button{cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-weight:600;transition:box-shadow .12s ease, transform .06s ease}
+    .primary{background:#162235;color:#e5e7eb}
+    .ghost{background:#0b1222;color:#cbd5e1}
+    button:hover{box-shadow:0 0 0 .12rem rgba(56,189,248,.18)}
+    button:active{transform:translateY(1px)}
+    .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+    .kpi{background:#0c1326;border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:4px}
+    .kpi .label{font-size:12px;color:#9ca3af}
+    .kpi .value{font-size:20px;font-weight:700;line-height:1.2}
+    .kpi .sub{font-size:12px;color:#86efac}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{border-bottom:1px dashed #223046;padding:6px 4px;text-align:right;white-space:nowrap}
+    th:first-child,td:first-child{text-align:left}
+    .table-wrap{max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-top:8px}
+    details{background:#0b1222;border:1px solid var(--line);border-radius:12px;padding:10px}
+    summary{cursor:pointer;font-weight:600;color:#e5e7eb}
+    .bullet{margin:6px 0 0 0;padding-left:18px;color:#cbd5e1}
+    .bullet li{margin:4px 0}
+    canvas{max-width:100%}
+    .reset-icon{position:relative}
+    .reset-icon button.resetTop{position:absolute;top:6px;right:6px;background:#0b1222;border:1px solid #253248;color:#93c5fd;border-radius:999px;padding:6px 9px;line-height:1;font-weight:700}
+    .reset-icon button.resetTop:hover{box-shadow:0 0 0 .18rem rgba(147,197,253,.18)}
+    .chart-wrap{position:relative;margin-top:10px}
+    .chart-placeholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:13px;pointer-events:none;text-align:center;padding:8px}
+    footer{max-width:1100px;margin:18px auto 28px;text-align:center;color:#9ca3af;font-size:12px}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>EMI Calculator — Smarter Way to Understand Your Loan</h1>
+    <p>Calculate EMI, APR (fees-included), simulate prepayments from any month, and see tenure & interest savings.</p>
+  </header>
+
+  <main class="container">
+    <section class="card reset-icon" aria-labelledby="calc-title">
+      <button id="resetIcon" class="resetTop" title="Reset all fields">↺</button>
+      <h2 id="calc-title" style="margin-top:0">Loan Inputs</h2>
+      <label for="amount">Loan amount (₹)</label>
+      <input id="amount" type="number" value="2500000" step="1000">
+      <label for="rate">Interest rate (p.a. %)</label>
+      <input id="rate" type="number" value="8.5" step="0.01">
+      <label for="tenureYears">Tenure (years)</label>
+      <input id="tenureYears" type="number" value="20" step="0.5" aria-describedby="tenureHint">
+      <div id="tenureHint" class="hint">We convert to months automatically (years × 12).</div>
+      <label for="extra">Extra payment per month (₹)</label>
+      <input id="extra" type="number" step="500" placeholder="Optional">
+      <div class="hint">Simulate faster payoff with monthly prepayments.</div>
+      <label for="startMonth">Start extra payments from month</label>
+      <input list="monthlist" id="startMonth" type="number" min="1" value="1">
+      <datalist id="monthlist"></datalist>
+      <div class="hint">Type or choose any month up to total tenure.</div>
+      <label for="procFee">Processing fee (%)</label>
+      <input id="procFee" type="number" value="0.5" step="0.1" aria-describedby="feeHint">
+      <div id="feeHint" class="hint">Typical: Home 0.25–1%, Personal 1–3% + GST 18%.</div>
+      <label for="gst">GST on fee (%)</label>
+      <input id="gst" type="number" value="18" step="0.1">
+      <div class="actions">
+        <button class="primary" id="calcBtn">Calculate EMI</button>
+        <button class="ghost" id="resetBtn">Reset</button>
+        <div id="error" class="hint" style="color:#ef4444"></div>
+      </div>
+      <div class="kpis" aria-live="polite" aria-atomic="true">
+        <div class="kpi"><div class="label">Monthly EMI</div><div class="value" id="emi">—</div><div class="sub" id="emiSub"></div></div>
+        <div class="kpi"><div class="label">Total Interest</div><div class="value" id="totalInterest">—</div><div class="sub" id="interestSub"></div></div>
+        <div class="kpi"><div class="label">Total Payment</div><div class="value" id="totalPayment">—</div><div class="sub" id="paymentSub"></div></div>
+      </div>
+      <div id="aprLine" class="hint" style="margin-top:6px"></div>
+      <div class="kpis" id="prepayRow" style="display:none">
+        <div class="kpi"><div class="label">Tenure Reduced</div><div class="value" id="tenureReduced">—</div><div class="sub" id="tenureSub"></div></div>
+        <div class="kpi"><div class="label">Interest Saved</div><div class="value" id="interestSaved">—</div><div class="sub">of base interest</div></div>
+        <div class="kpi"><div class="label">Processing Fee + GST</div><div class="value" id="feeGst">—</div><div class="sub">Upfront cost</div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+        <h3 style="margin:0">EMI Breakdown</h3>
+        <label class="hint" for="chartRange" style="display:flex;gap:8px;align-items:center">Show first
+          <select id="chartRange"><option value="12">12 months</option><option value="24" selected>24 months</option><option value="36">36 months</option><option value="60">60 months</option></select>
+        </label>
+      </div>
+      <div class="chart-wrap">
+        <div id="chartPlaceholder" class="chart-placeholder">Run a calculation to visualize your EMI breakdown here.</div>
+        <canvas id="emiChart" height="140"></canvas>
+      </div>
+    </section>
+
+    <aside class="card" aria-labelledby="learn-title">
+      <h2 id="learn-title" style="margin-top:0">How EMI is calculated (quick guide)</h2>
+      <p class="hint">EMI formula (reducing balance):</p>
+      <p><code>EMI = P × r × (1+r)<sup>n</sup> / ((1+r)<sup>n</sup> − 1)</code></p>
+      <ul class="bullet"><li><strong>P</strong> = Principal (loan amount)</li><li><strong>r</strong> = Monthly interest rate (annual ÷ 12 ÷ 100)</li><li><strong>n</strong> = Time in months (years × 12)</li></ul>
+      <h3 style="margin:12px 0 6px">What affects your EMI?</h3>
+      <ul class="bullet"><li><strong>Rate:</strong> Even 0.25% can nudge EMI on long tenures.</li><li><strong>Tenure:</strong> Longer tenure lowers EMI but increases total interest.</li><li><strong>Prepayment:</strong> Small extras monthly can save years and interest.</li><li><strong>Fees:</strong> Processing fee + GST increase true cost (APR).</li></ul>
+      <details style="margin-top:10px"><summary>FAQ</summary><p><strong>Reducing vs Flat rate?</strong> This tool uses reducing balance (industry standard).</p><p><strong>Part-prepayment charges?</strong> Vary by lender; check your sanction letter.</p></details>
+    </aside>
+  </main>
+
+  <section class="card" aria-labelledby="schedule-title" style="max-width:1100px;margin:0 auto 48px;padding:16px">
+    <h2 id="schedule-title" style="margin-top:0">Amortization Schedule</h2>
+    <div class="table-wrap" id="tableTop">
+      <table>
+        <thead><tr>
+          <th>Month</th><th>Opening</th><th>EMI</th><th class="extraHead" style="display:none">Extra</th><th>Principal</th><th>Interest</th><th>% Principal</th><th>% Interest</th><th>Closing</th>
+        </tr></thead>
+        <tbody id="tableBody"><tr><td colspan="9" style="text-align:center;color:#94a3b8">Run a calculation to see your schedule</td></tr></tbody>
+      </table>
+    </div>
+    <div class="actions">
+      <button class="ghost" id="toggleFull">Show full schedule till loan closure →</button>
+    </div>
+    <div class="hint" id="scheduleNote">Showing first 120 rows for performance.</div>
+  </section>
+
+  <footer>Last updated · Oct 2025</footer>
+
+  <script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const nf = new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0});
+    const nfi = new Intl.NumberFormat('en-IN',{maximumFractionDigits:0});
+    const $ = id => document.getElementById(id);
+
+    // Elements
+    const amount=$('amount'), rate=$('rate'), tenureYears=$('tenureYears');
+    const extra=$('extra'), startMonth=$('startMonth'), monthlist=$('monthlist');
+    const procFee=$('procFee'), gst=$('gst');
+    const calcBtn=$('calcBtn'), resetBtn=$('resetBtn'), resetIcon=$('resetIcon'), errorEl=$('error');
+    const emiEl=$('emi'), totalInterestEl=$('totalInterest'), totalPaymentEl=$('totalPayment');
+    const emiSub=$('emiSub'), interestSub=$('interestSub'), paymentSub=$('paymentSub');
+    const aprLine=$('aprLine');
+    const prepayRow=$('prepayRow'), tenureReduced=$('tenureReduced'), tenureSub=$('tenureSub'), interestSavedEl=$('interestSaved'), feeGstEl=$('feeGst');
+    const tableBody=$('tableBody'), tableTop=$('tableTop'), toggleFullBtn=$('toggleFull'), scheduleNote=$('scheduleNote');
+    const chartCtx = document.getElementById('emiChart').getContext('2d');
+    const chartRangeEl = $('chartRange');
+    const chartPlaceholder = $('chartPlaceholder');
+    let chart=null, lastRows=[], lastShowExtra=false, showFull=false;
+
+    function monthsFromYears(y){ return Math.round(y*12); }
+    function validate(){
+      const P=parseFloat(amount.value), R=parseFloat(rate.value), Y=parseFloat(tenureYears.value);
+      if(!(P>0)) return 'Enter a valid loan amount.';
+      if(!(R>0)) return 'Enter a valid interest rate.';
+      if(!(Y>0)) return 'Enter a valid tenure (years).';
+      return '';
+    }
+    function calcEmi(P, annualRate, N){
+      const r = annualRate/12/100;
+      if(r===0) return P/N;
+      const pow = Math.pow(1+r, N);
+      return P * r * pow / (pow - 1);
+    }
+    function buildSchedule(P, annualRate, N, emi){
+      const r = annualRate/12/100;
+      let bal=P, rows=[], totalInterest=0;
+      for(let m=1; m<=N; m++){
+        const interest = bal*r;
+        const principal = Math.min(emi - interest, bal);
+        const closing = Math.max(0, bal - principal);
+        const pctP = emi>0 ? (principal/emi)*100 : 0;
+        const pctI = emi>0 ? (interest/emi)*100 : 0;
+        rows.push({m, opening:bal, emi, extra:0, principal, interest, pctP, pctI, closing});
+        totalInterest += interest;
+        bal = closing;
+      }
+      return {rows, totalInterest};
+    }
+    function renderSchedule(rows, showExtra, limit=120){
+      const extraHead = document.querySelector('.extraHead');
+      extraHead.style.display = showExtra ? '' : 'none';
+      const subset = limit ? rows.slice(0, limit) : rows;
+      tableBody.innerHTML = subset.map(r=>`
+        <tr>
+          <td>${r.m}</td>
+          <td>${nf.format(r.opening)}</td>
+          <td>${nf.format(r.emi)}</td>
+          <td style="display:${showExtra ? 'table-cell' : 'none'}">${r.extra ? nf.format(r.extra) : ''}</td>
+          <td>${nf.format(r.principal)}</td>
+          <td>${nf.format(r.interest)}</td>
+          <td>${Math.round(r.pctP)}%</td>
+          <td>${Math.round(r.pctI)}%</td>
+          <td>${nf.format(r.closing)}</td>
+        </tr>
+      `).join('');
+      scheduleNote.textContent = limit ? `Showing first ${limit} rows (toggle to view all ${rows.length}).` : `Showing all ${rows.length} rows till closure.`;
+    }
+    function drawChart(rows){
+      const range = parseInt(chartRangeEl.value,10) || 24;
+      const slice = rows.slice(0, range);
+      const labels = slice.map(r=>'M'+r.m);
+      const principal = slice.map(r=>Math.round(r.principal));
+      const interest = slice.map(r=>Math.round(r.interest));
+      if(chart) chart.destroy();
+      chart = new Chart(chartCtx, {
+        type:'bar',
+        data:{
+          labels,
+          datasets:[
+            {label:'Principal', data:principal, stack:'emi', borderWidth:0, backgroundColor:'rgba(34,197,94,.85)'},
+            {label:'Interest', data:interest, stack:'emi', borderWidth:0, backgroundColor:'rgba(56,189,248,.85)'}
+          ]
+        },
+        options:{
+          responsive:true,
+          scales:{
+            x:{ stacked:true, ticks:{ color:'#cbd5e1' }},
+            y:{ stacked:true, ticks:{ color:'#cbd5e1', callback:(v)=> '₹'+(v/1000)+'k' }, grid:{ color:'#1f2937'} }
+          },
+          plugins:{
+            legend:{ labels:{ color:'#e5e7eb' } },
+            tooltip:{ callbacks:{
+              label:(ctx)=>{
+                const p = ctx.datasetIndex===0 ? ctx.parsed.y : chart.data.datasets[0].data[ctx.dataIndex];
+                const i = ctx.datasetIndex===1 ? ctx.parsed.y : chart.data.datasets[1].data[ctx.dataIndex];
+                const emi = (p||0)+(i||0);
+                const pct = emi ? Math.round(ctx.parsed.y/emi*100) : 0;
+                return `${ctx.dataset.label}: ₹${new Intl.NumberFormat('en-IN').format(ctx.parsed.y)} (${pct}%)`;
+              }
+            }}
+          }
+        }
+      });
+      chartPlaceholder.style.display = 'none';
+    }
+    function solveAprMonthly(P, feeTotal, emi, N){
+      if(!(feeTotal>0) || !(emi>0) || !(N>0)) return null;
+      const PV = P - feeTotal;
+      let lo=1e-7, hi=0.05;
+      const pvEmi = (r)=> emi * (1 - Math.pow(1+r, -N)) / r;
+      for(let i=0; i<80; i++){
+        const mid=(lo+hi)/2, val = pvEmi(mid) - PV;
+        if(Math.abs(val) < 1e-7) return mid;
+        if(val > 0) lo = mid; else hi = mid;
+      }
+      return (lo+hi)/2;
+    }
+    function fillMonthDatalist(N){
+      monthlist.innerHTML='';
+      for(let i=1; i<=N; i++){
+        const opt=document.createElement('option');
+        opt.value=i;
+        monthlist.appendChild(opt);
+      }
+      if(parseInt(startMonth.value,10) > N) startMonth.value = String(N);
+    }
+    function resetAll(){
+      [amount, rate, tenureYears, extra, startMonth, procFee, gst].forEach(i=> i.value='');
+      amount.value=2500000; rate.value=8.5; tenureYears.value=20; startMonth.value=1; procFee.value=0.5; gst.value=18;
+      tableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#94a3b8">Run a calculation to see your schedule</td></tr>';
+      prepayRow.style.display='none'; aprLine.textContent=''; errorEl.textContent='';
+      if(chart) chart.destroy();
+      chartPlaceholder.style.display = 'flex';
+      toggleFullBtn.textContent='Show full schedule till loan closure →';
+      showFull=false;
+      emiEl.textContent='—'; totalInterestEl.textContent='—'; totalPaymentEl.textContent='—';
+      emiSub.textContent=''; interestSub.textContent=''; paymentSub.textContent='';
+    }
+
+    // ACTIONS
+    calcBtn.addEventListener('click', ()=>{
+      errorEl.textContent='';
+      // Safe defaults
+      amount.value = amount.value || '0';
+      rate.value = rate.value || '0';
+      tenureYears.value = tenureYears.value || '0';
+      extra.value = extra.value || '0';
+      startMonth.value = startMonth.value || '1';
+      procFee.value = procFee.value || '0';
+      gst.value = gst.value || '18';
+
+      const err = validate();
+      if(err){ errorEl.textContent=err; return; }
+
+      const P=parseFloat(amount.value), R=parseFloat(rate.value), Y=parseFloat(tenureYears.value);
+      const N=monthsFromYears(Y);
+      const E=parseFloat(extra.value) || 0;
+      const S=Math.max(1, parseInt(startMonth.value,10) || 1);
+
+      const emi = calcEmi(P,R,N);
+      const base = buildSchedule(P,R,N,emi);
+      let rowsToShow = base.rows;
+      let totalInterestUsed = base.totalInterest;
+      lastRows = base.rows.slice();
+      lastShowExtra = false;
+      showFull = false;
+      fillMonthDatalist(N);
+
+      // Fees & APR
+      const fee = P * ((parseFloat(procFee.value)||0)/100);
+      const gstAmt = fee * ((parseFloat(gst.value)||0)/100);
+      const feeTotal = fee + gstAmt;
+      feeGstEl.textContent = nf.format(feeTotal);
+      const aprM = solveAprMonthly(P, feeTotal, emi, N);
+      aprLine.textContent = (aprM && isFinite(aprM))
+        ? `APR (including fees): ${(aprM*12*100).toFixed(2)}% nominal · ${((Math.pow(1+aprM,12)-1)*100).toFixed(2)}% effective`
+        : '';
+
+      // KPIs
+      emiEl.textContent = nf.format(emi);
+      totalInterestEl.textContent = nf.format(base.totalInterest);
+      totalPaymentEl.textContent = nf.format(P + base.totalInterest);
+      emiSub.textContent = `${nfi.format(N)} months (${(Y).toFixed(1)} years) at ${R.toFixed(2)}% p.a.`;
+      interestSub.textContent = `Interest/Principal ratio: ${(base.totalInterest/P).toFixed(2)}×`;
+
+      // Prepayment
+      if(E>0){
+        const r = R/12/100;
+        let bal=P, m=0, interestPaid=0;
+        const rows=[];
+        while(bal>0 && m<10000){
+          m++;
+          const interest = bal*r;
+          let pay = emi;
+          let extraNow = 0;
+          if(m>=S){ pay += E; extraNow = E; }
+          if(pay > bal + interest) pay = bal + interest;
+          const principal = pay - interest;
+          bal -= principal;
+          interestPaid += interest;
+          rows.push({
+            m, opening: bal + principal, emi, extra: extraNow,
+            principal, interest,
+            pctP: emi>0 ? (principal/emi)*100 : 0,
+            pctI: emi>0 ? (interest/emi)*100 : 0,
+            closing: bal
+          });
+        }
+        rowsToShow = rows;
+        lastRows = rows.slice();
+        lastShowExtra = true;
+        totalInterestUsed = interestPaid;
+
+        prepayRow.style.display='grid';
+        const newN = rows.length;
+        const monthsSaved = N - newN;
+        const pctSaved = (monthsSaved/N*100).toFixed(1);
+        const interestSaved = base.totalInterest - interestPaid;
+        const pctIntSaved = (interestSaved/base.totalInterest*100).toFixed(1);
+        tenureReduced.textContent = `${monthsSaved} months (${pctSaved}%)`;
+        tenureSub.textContent = `${newN} | ${N} months`;
+        interestSavedEl.textContent = `${nf.format(Math.max(0,interestSaved))} (${pctIntSaved}%)`;
+      } else {
+        prepayRow.style.display='none';
+      }
+
+      // Totals
+      totalPaymentEl.textContent = nf.format(P + totalInterestUsed);
+      paymentSub.textContent = `${nf.format(P)} + ${nf.format(totalInterestUsed)}`;
+
+      // Render
+      renderSchedule(rowsToShow, lastShowExtra, 120);
+      drawChart(rowsToShow);
+
+      // Toggle UI reset
+      showFull = false;
+      toggleFullBtn.textContent = 'Show full schedule till loan closure →';
+      tableTop.scrollIntoView({behavior:'smooth', block:'start'});
+    });
+
+    chartRangeEl.addEventListener('change', ()=>{ if(lastRows.length){ drawChart(lastRows); } });
+    resetBtn.addEventListener('click', resetAll);
+    resetIcon.addEventListener('click', resetAll);
+    toggleFullBtn.addEventListener('click', ()=>{
+      if(!lastRows.length) return;
+      showFull = !showFull;
+      renderSchedule(lastRows, lastShowExtra, showFull ? 0 : 120);
+      toggleFullBtn.textContent = showFull ? 'Show first 120 months only' : 'Show full schedule till loan closure →';
+      tableTop.scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  });
+  </script>
+</body>
+</html>
