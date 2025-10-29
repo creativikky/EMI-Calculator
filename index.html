@@ -141,7 +141,6 @@
     const nfi = new Intl.NumberFormat('en-IN',{maximumFractionDigits:0});
     const $ = id => document.getElementById(id);
 
-    // Elements
     const amount=$('amount'), rate=$('rate'), tenureYears=$('tenureYears');
     const extra=$('extra'), startMonth=$('startMonth'), monthlist=$('monthlist');
     const procFee=$('procFee'), gst=$('gst');
@@ -315,13 +314,6 @@
         ? `APR (including fees): ${(aprM*12*100).toFixed(2)}% nominal · ${((Math.pow(1+aprM,12)-1)*100).toFixed(2)}% effective`
         : '';
 
-      // KPIs
-      emiEl.textContent = nf.format(emi);
-      totalInterestEl.textContent = nf.format(base.totalInterest);
-      totalPaymentEl.textContent = nf.format(P + base.totalInterest);
-      emiSub.textContent = `${nfi.format(N)} months (${(Y).toFixed(1)} years) at ${R.toFixed(2)}% p.a.`;
-      interestSub.textContent = `Interest/Principal ratio: ${(base.totalInterest/P).toFixed(2)}×`;
-
       // Prepayment
       if(E>0){
         const r = R/12/100;
@@ -363,15 +355,24 @@
         prepayRow.style.display='none';
       }
 
-      // Totals
+      // KPIs
+      emiEl.textContent = nf.format(emi);
+      emiSub.textContent = `${nfi.format(N)} months (${(Y).toFixed(1)} years) at ${R.toFixed(2)}% p.a.`;
+
+      totalInterestEl.textContent = nf.format(totalInterestUsed);
+      const ipRatio = (totalInterestUsed / P).toFixed(2);
+      if(E > 0){
+        interestSub.textContent = `Interest/Principal ratio: ${ipRatio}× | Base interest: ${nf.format(base.totalInterest)}`;
+      } else {
+        interestSub.textContent = `Interest/Principal ratio: ${ipRatio}×`;
+      }
+
       totalPaymentEl.textContent = nf.format(P + totalInterestUsed);
       paymentSub.textContent = `${nf.format(P)} + ${nf.format(totalInterestUsed)}`;
 
-      // Render
       renderSchedule(rowsToShow, lastShowExtra, 120);
       drawChart(rowsToShow);
 
-      // Toggle UI reset
       showFull = false;
       toggleFullBtn.textContent = 'Show full schedule till loan closure →';
       tableTop.scrollIntoView({behavior:'smooth', block:'start'});
